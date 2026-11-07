@@ -272,7 +272,8 @@ device. Static review found:
       the `2-005a/gain` `sysfs_vibrator` genfscon, and the
       `hal_vibrator_default` allow rules.
     - No QTI vibrator service is installed in `/vendor/bin/hw`.
-  - On-device flashing/testing is still pending.
+  - On-device flashing/testing: build 113 flashed; haptics and torch
+    confirmed working.
 
 ### Useful post-flash checks
 
@@ -305,14 +306,66 @@ Things to watch on device:
 
 ---
 
+### On-device log review (2026-11-07, build 113)
+
+User flashed build 113 and confirmed haptics and torch work. `sconfig` reads
+`-1`, which is the intended AOSPA default.
+
+Verified from the captured `dmesg`/`logcat`:
+
+- **Haptics:** 1687 `aw8697_rtp_work_routine` messages, all from the normal
+  short final custom-wave chunk (304/381 bytes vs the 512-byte period). No
+  i2c, probe, firmware, checksum, or upload errors.
+- **Torch:** `CameraProviderManager` reports `AVAILABLE_ON`/`AVAILABLE_OFF`
+  and `FlashlightController` changes strength 0–200. No `switch_2`/torch
+  SELinux denials.
+- **Thermal:** `sconfig=-1` is expected. Charger thermal levels and DRM HBM
+  toggles show mitigation is active; no thermal trip/overheat logs.
+- **Kernel:** no panic, Oops, WARNING, hung task, or watchdog.
+- **SELinux:** no denials for `hal_vibrator_default`, AW8697, `switch_2`,
+  torch, `thermal_message`, or Dolby.
+- **Dolby Stage 1:** `DlbDlbEffect`/`DolbyManagerService` active; no hard
+  Dolby failures.
+
+Benign log noise / optional cleanup:
+
+- `aw8697_rtp_work_routine buffer size 512, availbe size 304/381` is printed
+  at `pr_err` for the normal short final RTP chunk. Demote to `pr_debug` if a
+  clean dmesg is wanted.
+- `flashv2: ... led short/open fault detected! led_status1=8` is printed at
+  `pr_emerg`. The newer `leds-qti-flash.c` driver logs the same condition at
+  `pr_debug`; it occurs while the LED is off/open-circuit-detected and torch
+  works. Not a functional fault.
+- CamX `WriteFlashStateToThermalNode() open .../flash_state failed`: the
+  kernel `thermal_message` node has no `flash_state` attribute. Torch works;
+  this is a camera thermal-report log only.
+
+Pre-existing / unrelated findings:
+
+- `vendor.qti.gnss.ILocAidlGnss/default` is missing, so `vendor_locservice`
+  retries it every second. HIDL GNSS services are installed; GPS was not
+  tested. Likely a pre-existing AIDL/HIDL packaging mismatch.
+- `ACDB-LOADER` `-100` and `send_afe_cal_type ... ret -22` calibration noise,
+  plus `audio_hw_extn` perf-lock errors. Audio/Dolby still work.
+- `WifiHAL getUsableChannels Error -3` / `WifiChipAidlImpl code 4`; likely
+  pre-existing and unrelated.
+- Keybox certificate expired 2026-11-06 (Play Integrity/keybox only).
+- App crashes: Banglalink (credential-encrypted prefs before unlock) and
+  Google Keep (sync assertion); app-side.
+- 305 SELinux denials in the capture, mostly KernelSU (`ksu`) and AOSP/QTI
+  policy gaps; none for the features above.
+
+---
+
 ## Next steps
 
-1. Build 113 succeeded; flash it and verify the artifacts on device.
-2. Verify the installed HAL, effect library, VINTF fragment, init permissions,
-   and all three waveform files.
-3. Test haptics; keep `PenguinOS-108-stage1-dolby.zip` as fallback.
-4. Commit/push vibrator changes to the existing `pa-sanji` branches.
-5. Commit/push Dolby Stage 1 and thermal-removal changes once validated.
+1. Build 113 is flashed; haptics and torch are confirmed working and
+   `sconfig=-1` is expected.
+2. Optional cleanup build: demote the AW8697 short-buffer and flashv2
+   fault logs to debug level.
+3. Commit/push vibrator changes to the existing `pa-sanji` branches.
+4. Commit/push Dolby Stage 1 and thermal-removal changes once validated.
+5. Investigate the missing AIDL GNSS service only if GPS is required.
 6. Only then consider AAC/RichTap, Dolby Vision/C2, or further haptic tuning.
 
 ---
