@@ -252,8 +252,27 @@ device. Static review found:
   - wrong waveform slot mapping
   - stale `high_vol` chown
   - `vib_rtp_time` length bug
-- Build 113 is the first build containing all of the above fixes.
-  (Update this line when the build/result is known.)
+- Build 113 is the first build containing all of the above fixes and it
+  succeeded (`BUILD113_EXIT=0`).
+  - Result: `PenguinOS-celerity-20261107-gms-alioth.zip` (2.7 GiB)
+  - SHA-256 `121ad77c5113b5cbf146d693ba246a9c0f1cdfe39224bef2117144a515cdd16b`
+  - The build was briefly stuck because an orphaned `siso` process from the
+    killed build 112 held the build FIFO; killing that process resumed it.
+  - Verified in the built images:
+    - `dtbo.img` entry contains the AW8697 node with `vib_rtp_time` count
+      **194** and `vib_effect_max = 193`.
+    - `vmlinux` contains `aw8697_i2c_probe`, `aw8697_haptics_upload_effect`,
+      `aw8697_custom_wave_store`, and the
+      `custom_wave_id=%d;abi_version=2;ram_gain_abi=1;` ABI string.
+    - `vendor.img` contains
+      `bin/hw/android.hardware.vibrator-service.xiaomi_aw8697` (0755),
+      `lib64/libaw8697effect.so`, all three waveforms (hashes match),
+      `etc/init/vibrator.rc`, and `etc/vintf/manifest/vibrator.xml`.
+    - Vendor policy contains the `vendor_sysfs_aw8697_custom_wave` genfscon,
+      the `2-005a/gain` `sysfs_vibrator` genfscon, and the
+      `hal_vibrator_default` allow rules.
+    - No QTI vibrator service is installed in `/vendor/bin/hw`.
+  - On-device flashing/testing is still pending.
 
 ### Useful post-flash checks
 
@@ -288,10 +307,10 @@ Things to watch on device:
 
 ## Next steps
 
-1. Finish build 113; fix any compile/sepolicy/packaging errors.
+1. Build 113 succeeded; flash it and verify the artifacts on device.
 2. Verify the installed HAL, effect library, VINTF fragment, init permissions,
    and all three waveform files.
-3. Flash and test haptics; keep `PenguinOS-108-stage1-dolby.zip` as fallback.
+3. Test haptics; keep `PenguinOS-108-stage1-dolby.zip` as fallback.
 4. Commit/push vibrator changes to the existing `pa-sanji` branches.
 5. Commit/push Dolby Stage 1 and thermal-removal changes once validated.
 6. Only then consider AAC/RichTap, Dolby Vision/C2, or further haptic tuning.
