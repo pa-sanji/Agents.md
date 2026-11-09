@@ -1,6 +1,6 @@
 # Alioth Pengu/AOSPA A17 — Agent Findings
 
-Last updated: 2026-11-07
+Last updated: 2026-11-09
 Device: Xiaomi Poco F3 (`alioth`, SM8250)
 ROM: Pengu / AOSPA Android 17
 Main tree: local Pengu/AOSPA checkout (absolute path intentionally omitted)
@@ -378,3 +378,139 @@ Pre-existing / unrelated findings:
 - Do not regenerate waveforms from the wrong stock slot.
 - Do not shorten `vib_rtp_time` below `vib_effect_max + 1`.
 - Do not expose `custom_wave` to `system_server` or apps.
+
+---
+
+## 2026-11-09 — Build 127–130, BT A2DP, HIDL 2.2 perf, cpusets, schedutil, game audio
+
+Canonical snapshot branch for the alioth-adapted forks: **`calcite`**.
+Existing branches are intentionally left in place. The upstream AOSPA/aospa-pipa/
+Roynas/NXP/Pixel dependencies are not forked into pa-sanji for this snapshot.
+
+Build index: `pa-sanji/.github` (README + `manifests/alioth.xml`).
+
+### Adapted pa-sanji repositories (`calcite`)
+
+| Path | Repository |
+|---|---|
+| `build/make` | `pa-sanji/build_make` |
+| `build/release` | `pa-sanji/android_build_release` |
+| `build/soong` | `pa-sanji/build_soong` |
+| `device/qcom/common` | `pa-sanji/android_device_qcom_common` |
+| `device/qcom/sepolicy` | `pa-sanji/device_qcom_sepolicy` |
+| `device/qcom/sepolicy_vndr` | `pa-sanji/android_device_qcom_sepolicy_vndr` |
+| `device/xiaomi/alioth` | `pa-sanji/device_xiaomi_aliothCLO` |
+| `device/xiaomi/camera` | `pa-sanji/device_xiaomi_camera` |
+| `frameworks/av` | `pa-sanji/frameworks_av` |
+| `frameworks/base` | `pa-sanji/frameworks_basepengu` |
+| `frameworks/native` | `pa-sanji/android_frameworks_nativepengu` |
+| `hardware/interfaces` | `pa-sanji/hardware_interfaces` |
+| `hardware/qcom/media` | `pa-sanji/android_hardware_qcom_media` |
+| `hardware/xiaomi` | `pa-sanji/android_hardware_xiaomi` |
+| `kernel/configs` | `pa-sanji/android_kernel_configs` |
+| `kernel/msm-4.19` | `pa-sanji/xiaomi_sm8250_kernel_e404` |
+| `packages/modules/Connectivity` | `pa-sanji/packages_modules_Connectivity` |
+| `system/libhwbinder` | `pa-sanji/android_system_libhwbinder` |
+| `vendor/aospa` | `pa-sanji/android_vendor_aospapengu` |
+| `vendor/qcom/opensource/audio-hal/primary-hal` | `pa-sanji/android_hardware_qcom_audio` |
+| `vendor/qcom/opensource/power` | `pa-sanji/vendor_qcom_opensource_power` |
+| `vendor/qcom/opensource/usb` | `pa-sanji/android_vendor_qcom-opensource_usb` |
+| `vendor/xiaomi` | `pa-sanji/proprietary_vendor_xiaomi` |
+| `vendor/xiaomi/camera` | `pa-sanji/vendor_xiaomi_camera` |
+| `packages/apps/GameBar` | `pa-sanji/packages_apps_GameBar` |
+| `hardware/dolby` | `pa-sanji/android_hardware_dolby` |
+
+External/upstream dependencies (unchanged, not forked):
+
+- `hardware/qcom/display` → `aospa-pipa/android_hardware_qcom_display` `calcite-865`
+- `hardware/qcom/gps` → `AOSPA/android_hardware_qcom_gps` `vauxite-legacy-component`
+- `hardware/samsung-ext/interfaces` → `Roynas-Android-Playground/hardware_samsung-extra_interfaces` `lineage-24.0`
+- `vendor/nxp/opensource/halimpl` / `hidlimpl` → `AOSPA/...` `vauxite-SN100X-legacy`
+- `vendor/qcom/opensource/thermal-hal` → `AOSPA/android_hardware_qcom_thermal` `calcite-legacy`
+- `vendor/google/pixel` → base `aospa.xml` (`android_vendor_google_pixel`, `blobs` remote)
+
+### Build outcomes
+
+| Build | Result | Artifact SHA-256 |
+|---|---|---|
+| 127 | booted, BT A2DP fixed | `aaa31404f8d020d60769419e1d68e1970121be962dd03c5369ef727a51ebb46e` |
+| 128 | booted, Dolby game bypass + perf2 sepolicy | `9714e95a6718bdfe01054548b68abcbb95d2aa424bbca050314383ccb3880b8d` |
+| 129 | failed at VINTF packaging (`PRODUCT_COPY_FILES` manifest) | — |
+| 130 | booted, stock HIDL 2.2 perf, cpusets, schedutil | `1343edf4e553a6ae154ab3f9f2332faa05d05ef9207cda8ff7f954e8da5c1216` |
+
+Build 130 artifact:
+`out/target/product/alioth/PenguinOS-celerity-20261109-gms-alioth.zip`.
+
+### Fixes in this round
+
+1. **BT A2DP** — `pa-sanji/proprietary_vendor_xiaomi` commit `2d97955`.
+   The stock `audio.primary.alioth.so` was patched to load the stock
+   `liba2dpoffload_alioth.so` / `libssrec_alioth.so` instead of the source-built
+   libraries whose `struct audio_device` ABI differs. Verified: `btfm_slim_hw_init`,
+   `btfm_slim_enable_ch` at 44100, ~4 min A2DP, 0 underruns, clean suspend/end.
+
+2. **Dolby foreground-game bypass** — `hardware/dolby` `4d62787`,
+   `packages/apps/GameBar` `51a65fc`, `device/qcom/sepolicy_vndr` `d6709e1`.
+   The bypass checks `AudioPlaybackConfiguration.usage == USAGE_GAME` and
+   `GameManager.getGameMode(foreground)`. `dls7` plays via `USAGE_MEDIA`, so the
+   foreground fallback matters. The implementation still uses a 1-second
+   `UsageEvents` window and does not fire when the game is already foreground.
+
+3. **Stock HIDL 2.2 perf stack** — `device/xiaomi/alioth` `3ccd771`,
+   `vendor/xiaomi` `3187025`, `device/qcom/common` `791e842b`.
+   Set `TARGET_PROVIDES_QTI_PERF_BLOBS=true`, install the stock
+   `vendor.qti.hardware.perf@2.2-service`, libs and configs, add
+   `ro.vendor.perf-hal.ver=2.2`, register the HIDL 2.2 manifest via
+   `DEVICE_MANIFEST_FILE`, and disable the generic AIDL perf2 service.
+   The stock `GameOptimizationFeature` implements the Picard `0x104A` hint.
+   Verified: no `QTI PowerHAL: Failed to send perf hint for hint_id: 104A`.
+
+4. **Boot cpusets** — kernel `e17f89885`.
+   `CONFIG_CPUSET_BG="0-1"`, `CONFIG_CPUSET_AUDIO_APP="1-2"`. Verified in dmesg:
+   `cpuset_assist: setting background to 0-1` and `audio-app to 1-2`.
+
+5. **Schedutil up/down tunables** — kernel `ff91acadf`.
+   Ported the Qualcomm 4.19 `up_rate_limit_us` / `down_rate_limit_us`
+   implementation; `min_rate_limit_ns` gate and direction-specific delay.
+   `init.aospa.perf.soc.rc` now writes real nodes.
+
+6. **Perf client sepolicy** — `vendor/aospa` `3e1e4ba0`.
+   `updater_app` and `flipendo` added to the public `vendor_hal_perf_client`
+   attribute from system_ext private policy. `priv_app`, `priv_app_36` and
+   `gamebar_app` already had rules in vendor policy.
+
+### Game audio — negative result
+
+Build 130 with Dolby enabled: 307 `out_write: underrun` in ~39 s;
+`DlbDap2Process` active. With Dolby turned off, the DAP lines disappeared but
+underruns continued (144 in the shown 23:02–23:05 segment, with dense bursts).
+Therefore **the Dolby DAP is not the root cause**. Remaining candidates:
+`audio-app` cpuset (`1-2`, little cores only), top-app contention, thermal,
+deep-buffer period size (1920/3840), and HAL/AudioFlinger thread scheduling.
+Future plan: test `audio-app 0-3/0-7/4-7`, `top-app` exclusion, schedutil 0/0,
+`vendor.audio_hal.period_multiplier=4`, and inspect `dumpsys media.audio_flinger`.
+
+### Known open issues
+
+- **`init` SIGABRT at boot** (`pid 3562 (init)`); `crash_dump` helper failed, no
+  tombstone. `init` domain has `neverallow ... execute_no_trans`, so init crashes
+  are not tombstoned. Capture `/sys/fs/pstore/console-ramoops*` and
+  `logcat -b crash`.
+- **`lmkd --reinit` blocked by kernel hack** in `fs/exec.c`
+  (`Super nasty hack to disable lmkd reloading props`). `lmkd` main service runs,
+  but the `lmkd_native` `device_config` tunables do not reload.
+- Residual perf log noise: AIDL `vendor.qti.hardware.perf2.IPerf/default`
+  “not found” after removing the AIDL service; PASR `IPasrManager` hwservice
+  denial from `vendor_hal_perf_default`.
+- `vendor.qti.gnss.ILocAidlGnss/default` missing; GNSS HIDL services installed.
+- Keybox certificate expired 2026-11-06 (Play Integrity/keybox only).
+
+### Canonical build pointers
+
+- Product manifest: `vendor/aospa/products/alioth/beans.xml` (adapted repos now
+  point at `calcite`; external deps keep their current revisions).
+- Local overlay: `.repo/local_manifests/gamebar.xml` (GameBar + Dolby on
+  `calcite`).
+- Build: `./rom-build.sh alioth -i -t user` with the RBE environment exported.
+- Repo index: `pa-sanji/.github`.
+
