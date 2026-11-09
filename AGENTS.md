@@ -510,7 +510,9 @@ Future plan: test `audio-app 0-3/0-7/4-7`, `top-app` exclusion, schedutil 0/0,
 ### Canonical build pointers
 
 - Product manifest: `vendor/aospa/products/alioth/beans.xml` (adapted repos now
-  point at `calcite`; external deps keep their current revisions).
+  point at `calcite`; external deps are now pa-sanji forks too).
+- New-tree local manifest: `.github/manifests/alioth-local.xml` (copy to
+  `.repo/local_manifests/`).
 - Local overlay: `.repo/local_manifests/gamebar.xml` (GameBar + Dolby on
   `calcite`).
 - Build: `./rom-build.sh alioth -i -t user` with the RBE environment exported.
