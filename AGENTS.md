@@ -406,6 +406,13 @@ Build index: `pa-sanji/.github` (README + `manifests/alioth.xml`).
 | `frameworks/native` | `pa-sanji/android_frameworks_nativepengu` |
 | `hardware/interfaces` | `pa-sanji/hardware_interfaces` |
 | `hardware/qcom/media` | `pa-sanji/android_hardware_qcom_media` |
+| `hardware/qcom/display` | `pa-sanji/android_hardware_qcom_display` |
+| `hardware/qcom/gps` | `pa-sanji/android_hardware_qcom_gps` |
+| `hardware/samsung-ext/interfaces` | `pa-sanji/hardware_samsung-extra_interfaces` |
+| `vendor/nxp/opensource/halimpl` | `pa-sanji/android_vendor_nxp_opensource_halimpl` |
+| `vendor/nxp/opensource/hidlimpl` | `pa-sanji/android_vendor_nxp_opensource_hidlimpl` |
+| `vendor/qcom/opensource/thermal-hal` | `pa-sanji/android_hardware_qcom_thermal` |
+| `vendor/google/pixel` | `pa-sanji/android_vendor_google_pixel` |
 | `hardware/xiaomi` | `pa-sanji/android_hardware_xiaomi` |
 | `kernel/configs` | `pa-sanji/android_kernel_configs` |
 | `kernel/msm-4.19` | `pa-sanji/xiaomi_sm8250_kernel_e404` |
@@ -420,14 +427,9 @@ Build index: `pa-sanji/.github` (README + `manifests/alioth.xml`).
 | `packages/apps/GameBar` | `pa-sanji/packages_apps_GameBar` |
 | `hardware/dolby` | `pa-sanji/android_hardware_dolby` |
 
-External/upstream dependencies (unchanged, not forked):
-
-- `hardware/qcom/display` → `aospa-pipa/android_hardware_qcom_display` `calcite-865`
-- `hardware/qcom/gps` → `AOSPA/android_hardware_qcom_gps` `vauxite-legacy-component`
-- `hardware/samsung-ext/interfaces` → `Roynas-Android-Playground/hardware_samsung-extra_interfaces` `lineage-24.0`
-- `vendor/nxp/opensource/halimpl` / `hidlimpl` → `AOSPA/...` `vauxite-SN100X-legacy`
-- `vendor/qcom/opensource/thermal-hal` → `AOSPA/android_hardware_qcom_thermal` `calcite-legacy`
-- `vendor/google/pixel` → base `aospa.xml` (`android_vendor_google_pixel`, `blobs` remote)
+All alioth product dependencies are now forked into `pa-sanji` and tracked on
+`calcite`; the remaining AOSP/AOSPA base comes from
+`Project-PenguinOS/manifest` (`celerity`).
 
 ### Build outcomes
 
